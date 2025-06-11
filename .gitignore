@@ -1,7 +1,8 @@
-*.media/
+sort/media/
 *.pyc
 *.env
-*.logs/
+logs/
 *.DS_Store
 *__pycache__/
 *.txt
+*.lrplugin
