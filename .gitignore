@@ -1,0 +1,7 @@
+*.media/
+*.pyc
+*.env
+*.logs/
+*.DS_Store
+*__pycache__/
+*.txt
