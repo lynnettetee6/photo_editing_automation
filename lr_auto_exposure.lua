@@ -1,5 +1,6 @@
 local LrTasks = import "LrTasks"
 local catalog = import "LrApplication".activeCatalog()
+local activeSources = import "LrApplication".activeCatalog().getActiveSources()
 local ProgressScope = import "LrProgressScope"
 local LrDialogs = import "LrDialogs"
 local LrLogger = import "LrLogger"
@@ -83,15 +84,19 @@ end
 
 
 LrTasks.startAsyncTask(function()
-    -- If there is a selection, `catalog:getTargetPhotos()` returns the list of selected photos.
-    -- Otherwise, it returns the entire list of photos in the filmstrip.
-    -- Returning the entire list of photos in the filmstrip is not desired, so do nothing if no selection.
-    if catalog:getTargetPhoto() == nil then
-        mylog("No photos selected. Nothing to do.")
-        return
-    end
+    -- local photos = catalog:getTargetPhotos()
+    local numSources = #activeSources
+    mylog("MAIN" .. "Number of active sources (collections/folders): " .. numSources)
+    -- local photos = folder:getPhotos{ includeChildren = true }
 
-    local photos = catalog:getTargetPhotos()
+    if numSources > 1 then 
+        mylog("MAIN" .. "No handling available yet for more than one active source. Action aborted." .. numSources)
+        return -- TODO patch this
+    end
+    
+    assert(numSources[1]:isKindOf("LrFolder"), "Expected first active source to be LrFolder, but it was instead a " .. numSources[1]:getType())
+
+    local photos = numSources[1].getPhotos()
     local count = #photos
 
     --[[
