@@ -1,4 +1,3 @@
-# TODO made changes based on new file st, TEST
 import heuristic as heu
 import ml
 
@@ -44,7 +43,7 @@ def main():
 
     images = [f for f in media.iterdir() if f.is_file() and not any(ext.lower() in f.name.lower() for ext in ['.DS_Store', '.mov', '.mp4', '.avi', '.txt', '.log'])]
 
-    # TODO skip images that have been processed 
+    # skip images that have been processed 
     with open(processed_log, 'r') as f:
         processed_images = set(line.strip() for line in f)
     images = [f for f in images if f.name not in processed_images]
@@ -71,7 +70,7 @@ def main():
             logger.debug(f'Time taken: {time_taken}')
             time_per_img.append(time_taken)
             
-            # TODO log the processed image
+            # log the processed image
             logger.debug(f"Recording image as processed...")
             with open(processed_log, 'a') as f:
                 f.write(f'{image.name}\n')

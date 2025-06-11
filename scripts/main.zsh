@@ -5,6 +5,7 @@ TRANSFER='scripts/transfer.zsh'
 SORT='sort/main.py'
 CAT='categorize/main.py'
 PY_VENV='/usr/local/Caskroom/miniconda/base/envs/photo-editing/bin/python'
+LAUNCH='scripts/launch.zsh'π
 
 # transfer files to dest directory upon inserting SD card
 ${ROOT_DIR}/${TRANSFER}
