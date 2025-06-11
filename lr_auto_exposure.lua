@@ -4,7 +4,7 @@ local LrDevelopController = import 'LrDevelopController'
 local ProgressScope = import "LrProgressScope"
 local LrDialogs = import "LrDialogs"
 local LrLogger = import "LrLogger"
-
+local LrSelection = import "LrSelection"
 local scriptName = "Auto Exposure"
 
 -- Follow Lightroom Classic SDK Guide to see the logs
@@ -31,9 +31,10 @@ function processPhoto(photo)
 
     -- sets auto tone, which will adjust more than just the exposure (we will fix that downstream)
     LrDevelopController:setAutoTone()
+    mylog(fileName .. "Auto-Toned Success")
+
     local developSettings = photo:getDevelopSettings()
     
-    local changed = false
 
     -- reset non-exposure values
     local resetSettingNames = {
@@ -57,12 +58,14 @@ function processPhoto(photo)
 
             if type(developSettings[name]) == "number" then 
                 developSettings[name] = resetValueNum
+                -- mylog(string.format("%s, %s, %d", fileName, name, resetValueNum))
 
             elseif type(developSettings[name]) == "boolean" then 
                 developSettings[name] = resetValueBool
+                -- mylog(string.format("%s, %s, %d", fileName, name, resetValueBool))
             end
         end
-    
+        
         catalog:withWriteAccessDo(scriptName, function(context)
             photo:applyDevelopSettings(developSettings, scriptName, false)
         end)
@@ -70,11 +73,28 @@ end
 
 
 LrTasks.startAsyncTask(function()
-    local photos = catalog:getTargetPhotos()
+    local activeSources = catalog:getActiveSources()
+    local numSources = #activeSources
+    mylog("MAIN" .. "Number of active sources (collections/folders): " .. numSources)
+    -- local photos = folder:getPhotos{ includeChildren = true }
+    
+    -- guardrail to only proceed if it is in the auto created watched folder
+    if numSources ~= 1 or activeSources[1]:type() ~= "LrFolder" or activeSources[1]:getName() ~= 'Auto Imported Photos' then
+        mylog(activeSources[1]:getName() .. " (" .. activeSources[1]:type() .. ") is not the 'Auto Imported Photos' in the watched folder!")
+        return 
+    end
+
+    mylog("Source Type: " .. activeSources[1]:type() .. " name: " .. activeSources[1]:getName())
+    local photos = activeSources[1]:getPhotos(true)
     local count = #photos
+    mylog("Number of photos:" .. count)
 
     local progressScope = ProgressScope({ title = scriptName, caption = scriptName, })
     
+    -- need to select all photos in folder to applying changes
+    LrSelection:selectAll()
+    mylog("Selected all photos in the folder")
+
     for i, photo in ipairs(photos) do
         processPhoto(photo)
         progressScope:setPortionComplete(i / count)
