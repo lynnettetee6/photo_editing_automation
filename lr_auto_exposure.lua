@@ -5,12 +5,12 @@ local ProgressScope = import "LrProgressScope"
 local LrDialogs = import "LrDialogs"
 local LrLogger = import "LrLogger"
 
-local scriptName = "Auto Develop"
+local scriptName = "Auto Exposure"
 
 -- Follow Lightroom Classic SDK Guide to see the logs
-local myLogger = LrLogger("libraryLogger")  -- log file name; will be in ~/Documents/LrClassicLogs/
+local myLogger = LrLogger("LRAutoExposureLogger")  -- log file name; will be in ~/Documents/LrClassicLogs/
 -- myLogger:enable("logfile")
--- myLogger:enable("print")
+myLogger:enable("print")
 
 
 function mylog(content)
@@ -21,6 +21,9 @@ end
 -- On one photo, auto adjust exposure
 function processPhoto(photo)
     local fileName = photo:getFormattedMetadata("fileName")
+    mylog("Processing image: ".. fileName)
+
+
     local format = photo:getRawMetadata("fileFormat")
     if format == "VIDEO" then
         return
@@ -28,7 +31,7 @@ function processPhoto(photo)
 
     -- sets auto tone, which will adjust more than just the exposure (we will fix that downstream)
     LrDevelopController:setAutoTone()
-    local developSettings = photo:getDevelopSettings() 
+    local developSettings = photo:getDevelopSettings()
     
     local changed = false
 
@@ -51,6 +54,7 @@ function processPhoto(photo)
         local resetValueNum = 0
         local resetValueBool = false -- Autox params (bool)
         for i, name in ipairs(resetSettingNames) do
+
             if type(developSettings[name]) == "number" then 
                 developSettings[name] = resetValueNum
 
@@ -61,7 +65,7 @@ function processPhoto(photo)
     
         catalog:withWriteAccessDo(scriptName, function(context)
             photo:applyDevelopSettings(developSettings, scriptName, false)
-        end 
+        end)
 end
 
 
