@@ -1,6 +1,7 @@
 local LrTasks = import "LrTasks"
 local catalog = import "LrApplication".activeCatalog()
-local activeSources = import "LrApplication".activeCatalog().getActiveSources()
+-- local activeSources = import "LrApplication".activeCatalog().getActiveSources()
+local LrDevelopController = import 'LrDevelopController'
 local ProgressScope = import "LrProgressScope"
 local LrDialogs = import "LrDialogs"
 local LrLogger = import "LrLogger"
@@ -31,7 +32,7 @@ function setDevelopSettings(settings, key, value)
 end
 
 
--- Handles one photo
+-- On one photo, auto adjust exposure
 function processPhoto(photo)
     local fileName = photo:getFormattedMetadata("fileName")
     local format = photo:getRawMetadata("fileFormat")
@@ -39,64 +40,106 @@ function processPhoto(photo)
         return
     end
 
-    local iso = photo:getRawMetadata("isoSpeedRating")  -- a number
-    if iso == nil then
-        mylog(fileName .. ": unable to get ISO speed")
-        return
-    end
-
+    -- sets auto tone, which will adjust more than just the exposure (we will fix that downstream)
+    LrDevelopController:setAutoTone()
+    local developSettings = photo:getDevelopSettings() 
     local changed = false
-    local developSettings = photo:getDevelopSettings()  -- a table
-    local factor = 33    -- ISO <= 100: Luminance NR = 5; ISO >= 1000: Luminance NR = 30
 
-    -- Luminance noise always exists. So limit the min value.
-    -- Luminance noise reduction becomes less effective when > 30
-    local luminanceNoiseReductionMin, luminanceNoiseReductionMax = 5, 30
+    local resetSettingNames = {
+            "Contrast2012",
+            "Highlights2012",
+            "Shadows2012",
+            "Whites2012",
+            "Blacks2012",
+    
+            "Sharpness",
+            "Clarity",
+            "Dehaze",
+            
+            "Vibrance",
+            "Saturation",
+        } -- "SharpenDetail", "Brightness", "HighlightRecovery"
 
-    -- Convert to integer to prevent fake changed value in `setDevelopSettings()`
-    -- Seems Lightroom internal Lua interpreter does not support `//` operator: unexpected symbol near '/'
-    local luminanceNoiseReduction = math.floor(iso / factor)
+    -- local resetSettingNames = {"Vibrance", "Exposure2012"}
 
-    if luminanceNoiseReduction < luminanceNoiseReductionMin then
-        luminanceNoiseReduction = luminanceNoiseReductionMin
-    end
-    if luminanceNoiseReduction > luminanceNoiseReductionMax then
-        luminanceNoiseReduction = luminanceNoiseReductionMax
-    end
+        for i, name in ipairs(resetSettingNames) do
+            if type(developSettings[name]) == "number" then 
+                local ret = setDevelopSettings(developSettings, name, 0)
+                changed = changed or ret
+            end
+            if type(developSettings[name]) == "boolean" then 
+                local ret = setDevelopSettings(developSettings, name, false)
+                changed = changed or ret
+            end
+        end
+        
+        if changed then
+            catalog:withWriteAccessDo(scriptName, function(context)
+                photo:applyDevelopSettings(developSettings, scriptName, false)
+            end )
+        end
+        
+        
+        
+        -- photo:quickDevelopAdjustImage("Exposure","large")
+        -- photo:applyDevelopSettings({ AutoExposure = true, })
+        
 
-    local colorNoiseReduction = developSettings["ColorNoiseReduction"]  -- number
-    if colorNoiseReduction < luminanceNoiseReduction then
-        colorNoiseReduction = luminanceNoiseReduction
-    end
 
-    mylog(fileName .. ": ISO = " .. iso .. ", will set luminance NR = " .. luminanceNoiseReduction .. ", color NR = " .. colorNoiseReduction)
+    -- for name, val in pairs(developSettings) do
+    --     if name ~= "Exposure" and type(val) == "number" then 
+    --         developSettings[name] = 0
+    --     end
+    --     if not string.find(name, "^Auto") and type(val) == "boolean" then
+    --         developSettings[name] = false
+    --     end
+    -- end
 
-    local ret = setDevelopSettings(developSettings, "LuminanceSmoothing", luminanceNoiseReduction)
-    changed = changed or ret
-    ret = setDevelopSettings(developSettings, "ColorNoiseReduction", colorNoiseReduction)
-    changed = changed or ret
-    if changed then
-        catalog:withWriteAccessDo(scriptName, function(context)
-            photo:applyDevelopSettings(developSettings, scriptName, false)
-        end )
-    end
+    -- catalog:withWriteAccessDo(scriptName, function(context)
+    --     photo:applyDevelopSettings(developSettings, scriptName, false)
+    -- end )
+
+
+
+
+
+
+
+    -- -- reset all other adjustments; keep exposure change only
+    
+
+    -- catalog:withWriteAccessDo(scriptName, function(context)
+    --     photo:applyDevelopSettings(resetSettings, scriptName, false)
+    -- end )
+    
+    
+  
+    -- -- check if settings are applied
+    -- for settingName, settingValue in pairs(photo:getDevelopSettings()) do
+    --     if settingName ~= "Exposure" and type(settingValue) == "number" and settingValue ~= 0 then
+    --         mylog(string.format("  Non-Exposure setting '%s' has a non-zero value: %s", settingName, tostring(settingValue)))
+    -- end
+    
+
 end
 
 
 LrTasks.startAsyncTask(function()
-    -- local photos = catalog:getTargetPhotos()
-    local numSources = #activeSources
-    mylog("MAIN" .. "Number of active sources (collections/folders): " .. numSources)
-    -- local photos = folder:getPhotos{ includeChildren = true }
-
-    if numSources > 1 then 
-        mylog("MAIN" .. "No handling available yet for more than one active source. Action aborted." .. numSources)
-        return -- TODO patch this
-    end
+    local photos = catalog:getTargetPhotos()
     
-    assert(numSources[1]:isKindOf("LrFolder"), "Expected first active source to be LrFolder, but it was instead a " .. numSources[1]:getType())
+    -- local numSources = #activeSources
+    -- mylog("MAIN" .. "Number of active sources (collections/folders): " .. numSources)
+    -- -- local photos = folder:getPhotos{ includeChildren = true }
 
-    local photos = numSources[1].getPhotos()
+    -- if numSources > 1 then 
+    --     mylog("MAIN" .. "No handling available yet for more than one active source. Action aborted." .. numSources)
+    --     return -- TODO patch this
+    -- end
+    
+    -- assert(numSources[1]:isKindOf("LrFolder"), "Expected first active source to be LrFolder, but it was instead a " .. numSources[1]:getType())
+
+    -- local photos = numSources[1].getPhotos()
+
     local count = #photos
 
     --[[
@@ -108,6 +151,7 @@ LrTasks.startAsyncTask(function()
     ]]
 
     local progressScope = ProgressScope({ title = scriptName, caption = scriptName, })
+    
 
     for i, photo in ipairs(photos) do
         processPhoto(photo)
@@ -115,6 +159,7 @@ LrTasks.startAsyncTask(function()
         progressScope:setPortionComplete(i / count)
         progressScope:setCaption("Processing " .. i .. "/" .. count)
     end
+    
 
     progressScope:done()
 end )
