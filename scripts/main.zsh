@@ -5,7 +5,7 @@ TRANSFER='scripts/transfer.zsh'
 SORT='sort/main.py'
 CAT='categorize/main.py'
 PY_VENV='/usr/local/Caskroom/miniconda/base/envs/photo-editing/bin/python'
-LAUNCH='scripts/launch.zsh'π
+LAUNCH='scripts/launch.zsh'
 
 # transfer files to dest directory upon inserting SD card
 ${ROOT_DIR}/${TRANSFER}
@@ -16,7 +16,10 @@ ${PY_VENV} ${ROOT_DIR}/${SORT}
 # launch Lightroom
 open -a "Adobe Lightroom Classic"
 
-## tag photos by subject/theme
+# Apply Auto Exposure in Lightroom
+${ROOT_DIR}/${LAUNCH}
+
+# TODO tag photos by subject/theme
 #./${ROOT_DIR}/tagging.py
 
 
