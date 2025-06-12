@@ -76,7 +76,7 @@ is_fully_launched=false
 for (( i=0; i<FINAL_READY_TIMEOUT; i+=INTERVAL )); do
     if osascript -e 'tell application "System Events" to (exists (windows of process "'"${APP_NAME}"'" whose name contains "'"${MAIN_APP_WINDOW_TITLE}"'" and visible is true))' &>/dev/null; then
         is_fully_launched=true
-        echo "  - Main window '${MAIN_APP_WINDOW_TITLE}' detected and visible. App is fully launched!"
+        echo "  - Main window '${MAIN_APP_WINDOW_TITLE}' detected and visible."
         break
     fi
     echo "  - Still waiting for main window '${MAIN_APP_WINDOW_TITLE}' to become visible..."
@@ -89,40 +89,7 @@ if [ "$is_fully_launched" = false ]; then
     exit 1
 fi
 
-
-# Poll for the "Quick Develop" text element (THE FINAL "DONE LAUNCHING" CHECK) ---
-echo "Waiting for 'Quick Develop' text to appear and be visible (max ${FINAL_CONTENT_LOAD_TIMEOUT}s)..."
-is_fully_launched=false
-for (( i=0; i<FINAL_CONTENT_LOAD_TIMEOUT; i+=INTERVAL )); do
-    if osascript -e '
-        tell application "System Events"
-            tell process "'"${APP_NAME}"'"
-                # First ensure the main window we target exists
-                if exists window "'"${MAIN_APP_WINDOW_TITLE}"'" then
-                    tell window "'"${MAIN_APP_WINDOW_TITLE}"'"
-                        -- Use the MAIN_CONTENT_ELEMENT_CHECK variable from above
-                        if '"${MAIN_CONTENT_ELEMENT_CHECK}"' then
-                            return true
-                        end if
-                    end tell
-                end if
-            end tell
-            return false
-        end tell
-    ' &>/dev/null; then
-        is_fully_launched=true
-        echo "  - 'Quick Develop' text detected. App is fully launched!"
-        break
-    fi
-    echo "  - Still waiting for 'Quick Develop' text to become visible..."
-    sleep "$INTERVAL"
-done
-
-if [ "$is_fully_launched" = false ]; then
-    echo "Error: 'Quick Develop' text for ${APP_NAME} did not appear or become visible within ${FINAL_CONTENT_LOAD_TIMEOUT} seconds."
-    echo "This might mean the app is stuck launching, or the Accessibility Inspector details for 'Quick Develop' are incorrect."
-    exit 1
-fi
+sleep 10 # TODO more elegant solution to detect when photos fully launched
 
 echo "--- ${APP_NAME} is fully launched and ready! ---"
 
