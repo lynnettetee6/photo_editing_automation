@@ -1,10 +1,11 @@
 #!/bin/zsh
 
-ROOT_DIR='/Users/lynnettetee/Documents/ml_projects/photo_edit_automation'
+set -a  # Automatically export all variables
+source .env
+
 TRANSFER='scripts/transfer.zsh'
 SORT='sort/main.py'
 CAT='categorize/main.py'
-PY_VENV='/usr/local/Caskroom/miniconda/base/envs/photo-editing/bin/python'
 LAUNCH='scripts/launch.zsh'
 
 # transfer files to dest directory upon inserting SD card
@@ -21,5 +22,6 @@ ${ROOT_DIR}/${LAUNCH}
 
 # TODO tag photos by subject/theme
 #./${ROOT_DIR}/tagging.py
+
 
 

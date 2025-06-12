@@ -5,4 +5,5 @@ logs/
 *.DS_Store
 *__pycache__/
 *.txt
+*.md
 *.lrplugin

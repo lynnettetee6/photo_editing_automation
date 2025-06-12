@@ -1,8 +1,7 @@
 #!/bin/zsh
 
-# Set your directories
-SRC='/Users/lynnettetee/Documents/eg_src'
-DEST='/Users/lynnettetee/Documents/eg_fuji'
+
+
 #SRC="/Volumes/Untitled/DCIM/100_FUJI"
 #DEST="/Volumes/BS Passport/Fuji X100VI"
 LOCKFILE="$DEST/.copy.lock"
