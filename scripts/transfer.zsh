@@ -1,9 +1,5 @@
 #!/bin/zsh
 
-
-
-#SRC="/Volumes/Untitled/DCIM/100_FUJI"
-#DEST="/Volumes/BS Passport/Fuji X100VI"
 LOCKFILE="$DEST/.copy.lock"
 MIN_JPG_SIZE=500000   # 500 KB
 MIN_RAF_SIZE=20000000 # 20 MB

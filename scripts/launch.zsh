@@ -89,10 +89,9 @@ if [ "$is_fully_launched" = false ]; then
     exit 1
 fi
 
-sleep 10 # TODO more elegant solution to detect when photos fully launched
+sleep 10 # TODO wait for photos to appear in library, as well as all new photos to be imported
 
 echo "--- ${APP_NAME} is fully launched and ready! ---"
-
 
 echo "Attempting to run script '${SCRIPT_MENU_ITEM}' in ${APP_NAME} via menu bar..."
 
