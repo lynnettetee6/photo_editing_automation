@@ -1,5 +1,5 @@
 local LrTasks = import "LrTasks"
-local catalog = import "LrApplication".activeCatalog()
+local catalog = import "LrApplication":activeCatalog()
 local LrDevelopController = import 'LrDevelopController'
 local ProgressScope = import "LrProgressScope"
 local LrDialogs = import "LrDialogs"
@@ -11,6 +11,35 @@ local scriptName = "Auto Exposure"
 local myLogger = LrLogger("LRAutoExposureLogger")  -- log file name; will be in ~/Documents/LrClassicLogs/
 -- myLogger:enable("logfile")
 myLogger:enable("print")
+
+-- TODO fix: use .env to get targetFolderPath
+
+local targetFolderPath = '/Users/lynnettetee/Documents/eg_fuji/eg_fuji_edit/AutoImport' -- WARNING! Change this to your actual path
+
+-- Load environment variables from .env file
+-- local function loadEnvFile(path)
+--     local env = {}
+--     local file = io.open(path, "r")
+--     if not file then
+--         mylog("Could not open .env file at: " .. path)
+--     end
+--     for line in file:lines() do
+--         local key, value = line:match("^%s*([%w_]+)%s*=%s*(.-)%s*$")
+--         if key and value then
+--             env[key] = value
+--         end
+--     end
+--     file:close()
+--     return env
+-- end
+-- local envPath = '/Users/lynnettetee/Library/Mobile Documents/com~apple~CloudDocs/ml_projects/photo_edit_automation/.env' -- WARNING! Change this to your actual path
+-- local env = loadEnvFile(envPath)
+-- local ROOT_DIR = env['ROOT_DIR']
+-- local DEST = env['DEST']
+-- local EDIT = env['EDIT_PATHNAME']
+-- local LR_AUTO_IMPORT_DIR = env['LR_AUTO_IMPORT_DIR']
+
+-- local targetFolderPath = string.format("%s_%s/%s", DEST, EDIT, LR_AUTO_IMPORT_DIR)
 
 
 function mylog(content)
@@ -73,19 +102,30 @@ end
 
 
 LrTasks.startAsyncTask(function()
-    local activeSources = catalog:getActiveSources()
-    local numSources = #activeSources
-    mylog("MAIN" .. "Number of active sources (collections/folders): " .. numSources)
-    -- local photos = folder:getPhotos{ includeChildren = true }
-    
-    -- guardrail to only proceed if it is in the auto created watched folder
-    if numSources ~= 1 or activeSources[1]:type() ~= "LrFolder" or activeSources[1]:getName() ~= 'Auto Imported Photos' then
-        mylog(activeSources[1]:getName() .. " (" .. activeSources[1]:type() .. ") is not the 'Auto Imported Photos' in the watched folder!")
-        return 
-    end
+    -- navigate to the target folder
+    mylog("Navigating to target folder: "..targetFolderPath)
 
-    mylog("Source Type: " .. activeSources[1]:type() .. " name: " .. activeSources[1]:getName())
-    local photos = activeSources[1]:getPhotos(true)
+    local autoImportFolder = catalog:getFolderByPath(targetFolderPath)
+    mylog("Folder path: " .. autoImportFolder:getPath())
+    
+    if not autoImportFolder then
+        mylog("autoImportFolder not found: " .. targetFolderPath)
+        LrDialogs.message("Error", "autoImportFolder not found: " .. targetFolderPath, "critical")
+        return
+    end
+    mylog("Found autoImportFolder: " .. autoImportFolder:getName() .. " at path: " .. autoImportFolder:getPath())
+
+    -- start processing photos in the folder
+    -- -- guardrail to only proceed if it is in the auto created watched folder
+    -- if numSources ~= 1 or activeSources[1]:type() ~= "LrFolder" or activeSources[1]:getName() ~= 'Auto Imported Photos' then
+    --     mylog(activeSources[1]:getName() .. " (" .. activeSources[1]:type() .. ") is not the 'Auto Imported Photos' in the watched folder!")
+    --     return 
+    -- end
+
+    -- mylog("Source Type: " .. activeSources[1]:type() .. " name: " .. activeSources[1]:getName())
+
+
+    local photos = autoImportFolder:getPhotos(true)
     local count = #photos
     mylog("Number of photos:" .. count)
 
