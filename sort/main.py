@@ -20,6 +20,8 @@ load_dotenv()
 
 root_dir = os.getenv("ROOT_DIR")
 media_path_ = os.getenv("MEDIA_PATH")
+edit = os.getenv("EDIT_PATHANME") if os.getenv("EDIT_PATHANME") else "edit"
+rm = os.getenv("RM_PATHANME") if os.getenv("RM_PATHANME") else "rm"
 metric = os.getenv("METRIC")
 attribute = os.getenv("ATTRIBUTE")
 subattribute = os.getenv("SUBATTRIBUTE")
@@ -36,9 +38,9 @@ def main():
     processed_log = media_path / processed_log_name
     processed_log.touch(exist_ok=True)
 
-    rm_path = media / f'{media_path.name}_rm' # define
+    rm_path = media / f'{media_path.name}_{rm}' # define
     rm_path.mkdir(parents=True, exist_ok=True) # create
-    edit_path = media / f'{media_path.name}_edit'
+    edit_path = media / f'{media_path.name}_{edit}'
     edit_path.mkdir(parents=True, exist_ok=True)
 
     images = [f for f in media.iterdir() if f.is_file() and not any(ext.lower() in f.name.lower() for ext in ['.DS_Store', '.mov', '.mp4', '.avi', '.txt', '.log'])]
