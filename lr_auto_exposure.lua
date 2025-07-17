@@ -14,6 +14,11 @@ local myLogger = LrLogger("LRAutoExposureLogger")  -- log file name; will be in 
 myLogger:enable("print")
 
 
+function mylog(content)
+    local label = scriptName
+    myLogger:trace("[" .. label .. "] " .. content)
+end
+
 -- Load environment variables from .env file
 local function loadEnvFile(path)
     local env = {}
@@ -38,11 +43,6 @@ local envPath = '/Users/lynnettetee/Library/Mobile Documents/com~apple~CloudDocs
 local env = loadEnvFile(envPath)
 local targetFolderPath = env['LR_AUTO_IMPORT_DEST']
 
-
-function mylog(content)
-    local label = scriptName
-    myLogger:trace("[" .. label .. "] " .. content)
-end
 
 function isVideo(photo)
     if photo:getRawMetadata("fileFormat") == "VIDEO" then
@@ -103,34 +103,38 @@ end
 
 
 LrTasks.startAsyncTask(function()
-    -- navigate to the target folder
-    mylog("Navigating to target folder: "..targetFolderPath)
-
-    -- Show in library view rather than develop view
+    -- 1. Show in library view rather than develop view
     LrApplicationView.switchToModule('library')
     mylog('Switched to library module')
     LrApplicationView.gridView()
     mylog('Switched to grid view')
-
-    local autoImportFolder = catalog:getFolderByPath(targetFolderPath)
-    mylog("Folder path: " .. autoImportFolder:getPath())
     
+    -- 2. Select the target folder as the active view
+    local autoImportFolder = catalog:getFolderByPath(targetFolderPath)
     if not autoImportFolder then
         mylog("autoImportFolder not found: " .. targetFolderPath)
         LrDialogs.message("Error", "autoImportFolder not found: " .. targetFolderPath, "critical")
         return
     end
-    mylog("Found autoImportFolder: " .. autoImportFolder:getName() .. " at path: " .. autoImportFolder:getPath())
+    
+    catalog:setActiveSources({autoImportFolder})
+    mylog("Set folder as active: " .. autoImportFolder:getPath())
+    
+    
 
-    local photos = autoImportFolder:getPhotos(true)
+    -- 3. Select all photos in target folder before applying changes
+    catalog:setSelectedPhotos(autoImportFolder:getPhotos(true)[1], autoImportFolder:getPhotos(true))
+    -- LrSelection.selectNone()
+    LrSelection.selectAll() -- in case setSelectedPhotos does not work
+    mylog("Selected all photos in active folder")
+    
+    -- -- 4. Apply auto exposure changes
+    -- local photos = autoImportFolder:getPhotos(true)
+    local photos = catalog:getTargetPhotos() -- returns the list of selected photos (in 3.)
     local count = #photos
     mylog("Number of photos:" .. count)
 
     local progressScope = ProgressScope({ title = scriptName, caption = scriptName, })
-    -- need to select all photos in folder to applying changes
-    LrSelection:selectAll()
-    mylog("Selected all photos in the folder")
-
     for i, photo in ipairs(photos) do
         if not isVideo(photo) then
             autoTone(photo)
@@ -146,4 +150,5 @@ LrTasks.startAsyncTask(function()
         end
     end
     progressScope:done()
+    mylog("Auto Exposure COMPLETE")
 end )

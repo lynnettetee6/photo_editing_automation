@@ -80,23 +80,31 @@ end
 
 
 LrTasks.startAsyncTask(function()
-    -- Show in library view rather than develop view
-    mylog('-----AUTO EXPOSURE MANUAL MODE-----')
-
+    -- 1. Show in library view rather than develop view
     LrApplicationView.switchToModule('library')
     mylog('Switched to library module')
     LrApplicationView.gridView()
     mylog('Switched to grid view')
+    
+    -- 3. Select all photos in target folder before applying changes
+    local activeSources = catalog:getActiveSources()
+    local activeFolder = activeSources[1]
+    mylog("Active folder: " .. activeFolder:getPath())
+    local folderPhotos = activeFolder:getPhotos(true)
 
-    local photos = catalog:getTargetPhotos()
+    catalog:setSelectedPhotos(folderPhotos[1], folderPhotos)
+    
+    LrSelection.selectAll() -- in case setSelectedPhotos does not work
+
+    mylog("Selected all photos in active folder")
+    
+    -- -- 4. Apply auto exposure changes
+    -- local photos = autoImportFolder:getPhotos(true)
+    local photos = catalog:getTargetPhotos() -- returns the list of selected photos (in 3.)
     local count = #photos
     mylog("Number of photos:" .. count)
 
     local progressScope = ProgressScope({ title = scriptName, caption = scriptName, })
-    -- need to select all photos in folder to applying changes
-    LrSelection:selectAll()
-    mylog("Selected all photos in the folder")
-
     for i, photo in ipairs(photos) do
         if not isVideo(photo) then
             autoTone(photo)
@@ -112,4 +120,5 @@ LrTasks.startAsyncTask(function()
         end
     end
     progressScope:done()
+    mylog("Auto Exposure COMPLETE")
 end )
