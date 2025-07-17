@@ -1,5 +1,6 @@
 local LrTasks = import "LrTasks"
 local catalog = import "LrApplication":activeCatalog()
+local LrApplicationView = import "LrApplicationView"
 local LrDevelopController = import 'LrDevelopController'
 local ProgressScope = import "LrProgressScope"
 local LrDialogs = import "LrDialogs"
@@ -12,34 +13,30 @@ local myLogger = LrLogger("LRAutoExposureLogger")  -- log file name; will be in 
 -- myLogger:enable("logfile")
 myLogger:enable("print")
 
--- TODO fix: use .env to get targetFolderPath
-
-local targetFolderPath = '/Users/lynnettetee/Documents/eg_fuji/eg_fuji_edit/AutoImport' -- WARNING! Change this to your actual path
 
 -- Load environment variables from .env file
--- local function loadEnvFile(path)
---     local env = {}
---     local file = io.open(path, "r")
---     if not file then
---         mylog("Could not open .env file at: " .. path)
---     end
---     for line in file:lines() do
---         local key, value = line:match("^%s*([%w_]+)%s*=%s*(.-)%s*$")
---         if key and value then
---             env[key] = value
---         end
---     end
---     file:close()
---     return env
--- end
--- local envPath = '/Users/lynnettetee/Library/Mobile Documents/com~apple~CloudDocs/ml_projects/photo_edit_automation/.env' -- WARNING! Change this to your actual path
--- local env = loadEnvFile(envPath)
--- local ROOT_DIR = env['ROOT_DIR']
--- local DEST = env['DEST']
--- local EDIT = env['EDIT_PATHNAME']
--- local LR_AUTO_IMPORT_DIR = env['LR_AUTO_IMPORT_DIR']
-
--- local targetFolderPath = string.format("%s_%s/%s", DEST, EDIT, LR_AUTO_IMPORT_DIR)
+local function loadEnvFile(path)
+    local env = {}
+    local file = io.open(path, "r")
+    if not file then
+        mylog("Could not open .env file at: " .. path)
+        return env
+    end
+    for line in file:lines() do
+        local key, value = line:match("^%s*([%w_]+)%s*=%s*(.-)%s*$")
+        if key and value then
+            -- Remove surrounding single or double quotes
+            value = value:match("^['\"](.+)['\"]$") or value
+            env[key] = value
+        end
+    end
+    file:close()
+    return env
+end
+mylog("Read env file")
+local envPath = '/Users/lynnettetee/Library/Mobile Documents/com~apple~CloudDocs/ml_projects/photo_edit_automation/.env'
+local env = loadEnvFile(envPath)
+local targetFolderPath = env['LR_AUTO_IMPORT_DEST']
 
 
 function mylog(content)
@@ -47,24 +44,27 @@ function mylog(content)
     myLogger:trace("[" .. label .. "] " .. content)
 end
 
--- On one photo, auto adjust exposure
-function processPhoto(photo)
-    local fileName = photo:getFormattedMetadata("fileName")
-    mylog("Processing image: ".. fileName)
-
-
-    local format = photo:getRawMetadata("fileFormat")
-    if format == "VIDEO" then
-        return
+function isVideo(photo)
+    if photo:getRawMetadata("fileFormat") == "VIDEO" then
+        mylog(photo:getFormattedMetadata("fileName") .. "not processed as it is a video")
+        return true
     end
 
-    -- sets auto tone, which will adjust more than just the exposure (we will fix that downstream)
+    return false
+end
+
+function autoTone(photo)
+    local fileName = photo:getFormattedMetadata("fileName")
+    mylog("Auto Tone image: ".. fileName)
     LrDevelopController:setAutoTone()
     mylog(fileName .. "Auto-Toned Success")
+end
 
+function resetAllButExposure(photo)
+    local fileName = photo:getFormattedMetadata("fileName")
+    mylog("Reset All but Exposure for image: ".. fileName)
     local developSettings = photo:getDevelopSettings()
     
-
     -- reset non-exposure values
     local resetSettingNames = {
             "Contrast2012",
@@ -98,12 +98,19 @@ function processPhoto(photo)
         catalog:withWriteAccessDo(scriptName, function(context)
             photo:applyDevelopSettings(developSettings, scriptName, false)
         end)
+        mylog(fileName .. "Auto-Reset Success")
 end
 
 
 LrTasks.startAsyncTask(function()
     -- navigate to the target folder
     mylog("Navigating to target folder: "..targetFolderPath)
+
+    -- Show in library view rather than develop view
+    LrApplicationView.switchToModule('library')
+    mylog('Switched to library module')
+    LrApplicationView.gridView()
+    mylog('Switched to grid view')
 
     local autoImportFolder = catalog:getFolderByPath(targetFolderPath)
     mylog("Folder path: " .. autoImportFolder:getPath())
@@ -115,31 +122,28 @@ LrTasks.startAsyncTask(function()
     end
     mylog("Found autoImportFolder: " .. autoImportFolder:getName() .. " at path: " .. autoImportFolder:getPath())
 
-    -- start processing photos in the folder
-    -- -- guardrail to only proceed if it is in the auto created watched folder
-    -- if numSources ~= 1 or activeSources[1]:type() ~= "LrFolder" or activeSources[1]:getName() ~= 'Auto Imported Photos' then
-    --     mylog(activeSources[1]:getName() .. " (" .. activeSources[1]:type() .. ") is not the 'Auto Imported Photos' in the watched folder!")
-    --     return 
-    -- end
-
-    -- mylog("Source Type: " .. activeSources[1]:type() .. " name: " .. activeSources[1]:getName())
-
-
     local photos = autoImportFolder:getPhotos(true)
     local count = #photos
     mylog("Number of photos:" .. count)
 
     local progressScope = ProgressScope({ title = scriptName, caption = scriptName, })
-    
     -- need to select all photos in folder to applying changes
     LrSelection:selectAll()
     mylog("Selected all photos in the folder")
 
     for i, photo in ipairs(photos) do
-        processPhoto(photo)
-        progressScope:setPortionComplete(i / count)
-        progressScope:setCaption("Processing " .. i .. "/" .. count)
+        if not isVideo(photo) then
+            autoTone(photo)
+            progressScope:setPortionComplete(i / count)
+            progressScope:setCaption("AutoTone " .. i .. "/" .. count)
+        end
     end
-    
+    for i, photo in ipairs(photos) do
+        if not isVideo(photo) then
+            resetAllButExposure(photo)
+            progressScope:setPortionComplete(i / count)
+            progressScope:setCaption("Reset all but Exposure " .. i .. "/" .. count)
+        end
+    end
     progressScope:done()
 end )
