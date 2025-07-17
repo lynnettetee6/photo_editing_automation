@@ -59,8 +59,7 @@ def main():
         try:
             start_time = datetime.now().timestamp()
             if heu.is_bad_exposure(image) or ml.is_blurry_moondream(image):
-            # if heu.is_blurry_laplacian(image):
-            # # if heu.is_bad_exposure(image) or heu.is_blurry(image):
+            # TODO to save time - if is blurry, move both jpg and raf to rm path. If bad exposure, move jpg but not raf
                 shutil.move(image, rm_path) # mv to rm path
                 logger.debug(f'moving {image.name} to {rm_path.name}')
             else: 
