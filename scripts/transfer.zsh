@@ -4,6 +4,10 @@ LOCKFILE="$DEST/.copy.lock"
 MIN_JPG_SIZE=500000   # 500 KB
 MIN_RAF_SIZE=20000000 # 20 MB
 MIN_MOV_SIZE=2000000  # 2 MB
+PROCESSED_FILE="$DEST/$PROCESSED_LOG_NAME"
+
+echo "SRC: $SRC"
+echo "DEST: $DEST"
 
 # Ensure lock file is removed on script exit (even if interrupted)
 trap 'rm -f "$LOCKFILE"; echo "Lock file removed (cleanup)."; exit' INT TERM
@@ -14,7 +18,7 @@ if [[ -e $LOCKFILE ]]; then
   exit 0 
 fi
 
-echo "🔓 No lock found. Proceeding with media transfery..."
+echo "🔓 No lock found. Proceeding with media transfer..."
 
 # Create lock file at destination directory
 touch "$LOCKFILE"
@@ -24,6 +28,12 @@ echo "🔒 Lock file created at $LOCKFILE"
 if [[ ! -d "$SRC" || ! -d "$DEST" ]]; then
   echo "Either '$SRC' or '$DEST' does not exist."
   exit 1
+fi
+
+# Create processed log if it doesn't exist
+if [[ ! -f "$PROCESSED_FILE" ]]; then
+  touch "$PROCESSED_FILE"
+  echo "📝 Created processed log at $PROCESSED_FILE"
 fi
 
 # Rollback corrupted files
@@ -42,7 +52,8 @@ for file in "$SRC"/*; do
   # Check if it's a regular file (not directory, symlink, etc.)
   if [[ -f "$file" ]]; then
     filename=$(basename "$file")
-    if [[ ! -e "$DEST/$filename" ]]; then
+    # Check if file is already processed
+    if ! grep -q "^${filename}$" "$PROCESSED_FILE" && [[ ! -e "$DEST/$filename" ]]; then
       cp "$file" "$DEST/"
       echo "Copied $filename to $DEST"
     fi
